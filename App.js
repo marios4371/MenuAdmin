@@ -14,30 +14,28 @@ SplashScreen.preventAutoHideAsync();
 
 const Stack = createStackNavigator();
 
-// Χρησιμοποιούμε Dark Theme για να ταιριάζει
+// Χρησιμοποιούμε Dark Theme
 const theme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: '#ffffff', // Λευκά στοιχεία
-    background: '#121212', // Μαύρο φόντο
+    primary: '#ffffff',
+    background: '#121212',
   },
 };
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(1)).current; // Ξεκινάει ορατό (Opacity 1)
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     async function prepare() {
       try {
-        // Εδώ περιμένουμε 2.5 δευτερόλεπτα. Σε αυτό το διάστημα,
-        // ο χρήστης βλέπει το Native Splash Screen που είναι μαύρο.
+        // Περιμένουμε 2.5 δευτερόλεπτα
         await new Promise(resolve => setTimeout(resolve, 2500));
       } catch (e) {
         console.warn(e);
       } finally {
-        // Δηλώνουμε ότι η εφαρμογή είναι έτοιμη
         setAppIsReady(true);
       }
     }
@@ -46,16 +44,11 @@ export default function App() {
 
   useEffect(() => {
     if (appIsReady) {
-      // Μόλις είμαστε έτοιμοι:
       const transition = async () => {
-        // 1. Κρύβουμε το Native Splash. Επειδή το δικό μας custom view
-        // από κάτω είναι ΙΔΙΟ (μαύρο), η αλλαγή είναι αόρατη.
         await SplashScreen.hideAsync();
-
-        // 2. Ξεκινάμε το Fade Out του δικού μας view
         Animated.timing(fadeAnim, {
-          toValue: 0,      // Πάει σε διαφάνεια 0
-          duration: 800,   // Μέσα σε 0.8 δευτερόλεπτα
+          toValue: 0,
+          duration: 800,
           useNativeDriver: true,
         }).start();
       };
@@ -65,7 +58,6 @@ export default function App() {
 
   return (
     <PaperProvider theme={theme}>
-      {/* Ρυθμίζουμε την μπάρα κατάστασης του κινητού να είναι ανοιχτόχρωμη */}
       <StatusBar barStyle="light-content" backgroundColor="#121212" />
       
       <View style={{ flex: 1, backgroundColor: '#121212' }}>
@@ -78,21 +70,21 @@ export default function App() {
         </NavigationContainer>
 
         {/* --- CUSTOM INTRO SCREEN --- */}
-        {/* Αυτό κάθεται ΠΑΝΩ από όλα μέχρι να εξαφανιστεί */}
         <Animated.View 
           style={[
             styles.splashContainer, 
             { opacity: fadeAnim },
-            // Όταν η διαφάνεια γίνει 0, σταματάμε να δεχόμαστε κλικ
             { pointerEvents: fadeAnim._value === 0 ? 'none' : 'auto' } 
           ]}
         >
           <Text style={styles.splashTitle}>MENU</Text>
           <Text style={styles.splashSubtitle}>ADMINISTRATOR</Text>
           
+          {/* ΔΙΟΡΘΩΣΗ ΕΔΩ: Κλείνουμε σωστά το View */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>POWERED BY THERISTIS</Text>
-          </Animated.View>
+          </View>
+
         </Animated.View>
 
       </View>
@@ -102,11 +94,11 @@ export default function App() {
 
 const styles = StyleSheet.create({
   splashContainer: {
-    ...StyleSheet.absoluteFillObject, // Πιάνει όλη την οθόνη
-    backgroundColor: '#121212',       // ΑΠΟΛΥΤΟ ΜΑΥΡΟ
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#121212',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 9999,                     // Πάντα στην κορυφή
+    zIndex: 9999,
   },
   splashTitle: {
     color: '#FFFFFF',
