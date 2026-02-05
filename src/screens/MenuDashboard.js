@@ -3,14 +3,14 @@ import { View, ScrollView, StyleSheet, Alert, RefreshControl, KeyboardAvoidingVi
 import { Text, Card, Button, IconButton, ActivityIndicator, FAB, Divider, TextInput } from 'react-native-paper';
 import { api } from '../services/api';
 
+// ΑΥΣΤΗΡΗ ΜΑΥΡΟΑΣΠΡΗ ΠΑΛΕΤΑ
 const COLORS = {
-  primary: '#121212',
-  accent: '#333333',
-  background: '#F4F4F4',
-  card: '#FFFFFF',
-  text: '#111111',
-  subtext: '#666666',
-  danger: '#D32F2F',
+  primary: '#000000',    // Μαύρο
+  background: '#F4F4F4', // Ανοιχτό Γκρι
+  card: '#FFFFFF',       // Λευκό
+  text: '#000000',       // Μαύρο
+  subtext: '#666666',    // Σκούρο Γκρι
+  border: '#000000',     // Μαύρο περίγραμμα
 };
 
 export default function MenuDashboard({ route, navigation }) {
@@ -20,11 +20,7 @@ export default function MenuDashboard({ route, navigation }) {
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // VIEWS STATE
   const [viewMode, setViewMode] = useState('LIST');
-
-  // EXPAND STATE
   const [expandedCategories, setExpandedCategories] = useState({}); 
 
   // Data Holders
@@ -33,7 +29,6 @@ export default function MenuDashboard({ route, navigation }) {
   const [tempCatTitle, setTempCatTitle] = useState('');
   const [tempProd, setTempProd] = useState({ name: '', description: '', price: '' });
 
-  // LOAD
   const loadMenu = async () => {
     setLoading(true);
     const data = await api.getMenuData(shopId, password);
@@ -48,7 +43,6 @@ export default function MenuDashboard({ route, navigation }) {
 
   useEffect(() => { loadMenu(); }, []);
 
-  // Back Button Handler
   useEffect(() => {
     const backAction = () => {
       if (viewMode !== 'LIST') {
@@ -61,15 +55,10 @@ export default function MenuDashboard({ route, navigation }) {
     return () => backHandler.remove();
   }, [viewMode]);
 
-  // TOGGLE CATEGORY
   const toggleCategory = (index) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+    setExpandedCategories(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // SAVE
   const saveChanges = async (updatedMenu) => {
     setSaving(true);
     const fullData = { menu: updatedMenu, settings: settings };
@@ -108,7 +97,7 @@ export default function MenuDashboard({ route, navigation }) {
   };
 
   const handleDeleteCategory = (index) => {
-    Alert.alert("Delete Category", "All products will be removed", [
+    Alert.alert("Delete Category", "Delete all products inside?", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: 'destructive', onPress: () => {
           const newMenu = [...menuData];
@@ -142,7 +131,7 @@ export default function MenuDashboard({ route, navigation }) {
   };
 
   const handleDeleteProduct = (catIndex, prodIndex) => {
-    Alert.alert("Delete Product", "This product will be removed", [
+    Alert.alert("Delete Product", "Sure?", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: 'destructive', onPress: () => {
           const newMenu = [...menuData];
@@ -176,9 +165,9 @@ export default function MenuDashboard({ route, navigation }) {
 
                   {isExpanded && (
                     <View style={styles.actionButtonsRow}>
-                      <Button mode="outlined" compact onPress={() => openCategoryEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>Edit</Button>
-                      <Button mode="outlined" compact onPress={() => openProductEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>Add</Button>
-                      <Button mode="outlined" compact onPress={() => handleDeleteCategory(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel}>Delete</Button>
+                      <Button mode="outlined" compact onPress={() => openCategoryEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Edit</Button>
+                      <Button mode="outlined" compact onPress={() => openProductEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Add</Button>
+                      <Button mode="outlined" compact onPress={() => handleDeleteCategory(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Delete</Button>
                     </View>
                   )}
 
@@ -196,23 +185,19 @@ export default function MenuDashboard({ route, navigation }) {
               {isExpanded && category.items.map((item, prodIndex) => (
                   <View key={prodIndex} style={styles.productRow}>
                       
-                      {/* 1. Clickable Text Area (Για να κάνεις Edit πατάς το κείμενο) */}
-                      <TouchableOpacity 
-                        style={{flex: 1}} 
-                        onPress={() => openProductEdit(catIndex, prodIndex)}
-                      >
+                      <TouchableOpacity style={{flex: 1}} onPress={() => openProductEdit(catIndex, prodIndex)}>
                           <Text style={styles.prodName}>{item.name}</Text>
                           {item.description ? <Text style={styles.prodDesc} numberOfLines={1}>{item.description}</Text> : null}
                           <Text style={styles.prodPrice}>{item.price}</Text>
                       </TouchableOpacity>
 
-                      {/* 2. Single Delete Button (Όπως το ζήτησες) */}
                       <Button 
                         mode="outlined" 
                         compact 
                         onPress={() => handleDeleteProduct(catIndex, prodIndex)} 
                         style={styles.actionBtn} 
                         labelStyle={styles.actionBtnLabel}
+                        textColor="black"
                       >
                         Delete
                       </Button>
@@ -225,7 +210,13 @@ export default function MenuDashboard({ route, navigation }) {
         <View style={{height: 100}} />
       </ScrollView>
 
-      <FAB icon="plus" color="white" style={styles.fab} onPress={() => openCategoryEdit(null)} />
+      {/* FAB: ΜΑΥΡΟ ΚΟΥΜΠΙ */}
+      <FAB 
+        icon="plus" 
+        color="white" 
+        style={styles.fab} 
+        onPress={() => openCategoryEdit(null)} 
+      />
     </>
   );
 
@@ -242,19 +233,34 @@ export default function MenuDashboard({ route, navigation }) {
             <Card style={{padding: 10, backgroundColor:'white'}}>
                 {content}
                 <View style={styles.formButtons}>
-                    <Button mode="outlined" onPress={() => setViewMode('LIST')} style={{flex:1, marginRight:10}} textColor={COLORS.subtext}>Cancel</Button>
-                    <Button mode="contained" onPress={onSave} style={{flex:1}} buttonColor={COLORS.primary} loading={saving}>Save</Button>
+                    <Button 
+                        mode="outlined" 
+                        onPress={() => setViewMode('LIST')} 
+                        style={{flex:1, marginRight:10, borderColor: 'black'}} 
+                        textColor="black"
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        mode="contained" 
+                        onPress={onSave} 
+                        style={{flex:1}} 
+                        buttonColor="black" // ΜΑΥΡΟ ΚΟΥΜΠΙ
+                        textColor="white"   // ΑΣΠΡΑ ΓΡΑΜΜΑΤΑ
+                        loading={saving}
+                    >
+                        Save
+                    </Button>
                 </View>
             </Card>
         </ScrollView>
     </KeyboardAvoidingView>
   );
 
-  // RENDER SWITCH
   if (viewMode === 'EDIT_CAT') {
       return renderForm(
           editingCatIndex !== null ? 'EDIT CATEGORY' : 'NEW CATEGORY',
-          <TextInput label="NAME" value={tempCatTitle} onChangeText={setTempCatTitle} mode="outlined" autoFocus style={styles.input} activeOutlineColor={COLORS.primary} />,
+          <TextInput label="NAME" value={tempCatTitle} onChangeText={setTempCatTitle} mode="outlined" autoFocus style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />,
           saveCategory
       );
   }
@@ -263,9 +269,9 @@ export default function MenuDashboard({ route, navigation }) {
       return renderForm(
           editingProdCoords?.prodIndex !== null ? 'EDIT PRODUCT' : 'NEW PRODUCT',
           <>
-            <TextInput label="NAME" value={tempProd.name} onChangeText={(t) => setTempProd({...tempProd, name: t})} mode="outlined" style={styles.input} activeOutlineColor={COLORS.primary} />
-            <TextInput label="PRICE" value={tempProd.price} onChangeText={(t) => setTempProd({...tempProd, price: t})} mode="outlined" keyboardType="numbers-and-punctuation" style={styles.input} activeOutlineColor={COLORS.primary} />
-            <TextInput label="DESCRIPTION" value={tempProd.description} onChangeText={(t) => setTempProd({...tempProd, description: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor={COLORS.primary} />
+            <TextInput label="NAME" value={tempProd.name} onChangeText={(t) => setTempProd({...tempProd, name: t})} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+            <TextInput label="PRICE" value={tempProd.price} onChangeText={(t) => setTempProd({...tempProd, price: t})} mode="outlined" keyboardType="numbers-and-punctuation" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+            <TextInput label="DESCRIPTION" value={tempProd.description} onChangeText={(t) => setTempProd({...tempProd, description: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
           </>,
           saveProduct
       );
@@ -281,13 +287,9 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 12 },
   card: { marginBottom: 12, backgroundColor: COLORS.card, borderRadius: 4 },
   
-  catHeader: { 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    paddingLeft: 12, paddingRight: 2, paddingVertical: 8, minHeight: 50
-  },
+  catHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 12, paddingRight: 2, paddingVertical: 8, minHeight: 50 },
   catTitle: { fontWeight: 'bold', fontSize:14, color: COLORS.text, letterSpacing: 0.5, flex: 1 },
   
-  // BUTTON STYLES
   actionButtonsRow: { flexDirection: 'row', marginRight: 5, gap: 5 },
   actionBtn: { borderColor: 'black', borderWidth: 1, borderRadius: 4, height: 30, justifyContent: 'center', marginLeft: 4 },
   actionBtnLabel: { fontSize: 10, color: 'black', marginVertical: 2, marginHorizontal: 8 },
@@ -296,8 +298,8 @@ const styles = StyleSheet.create({
   prodName: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   prodDesc: { fontSize: 12, color: COLORS.subtext },
   prodPrice: { fontSize: 14, color: COLORS.primary, fontWeight: 'bold', marginTop: 2 },
+  
   fab: { position: 'absolute', margin: 20, right: 0, bottom: 0, backgroundColor: COLORS.primary },
-
-  input: { marginBottom: 15, backgroundColor:'#fff' },
+  input: { marginBottom: 15 },
   formButtons: { flexDirection: 'row', marginTop: 10 }
 });
