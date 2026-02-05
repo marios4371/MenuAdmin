@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { PaperProvider, MD3DarkTheme } from 'react-native-paper';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Screens
@@ -14,80 +14,85 @@ SplashScreen.preventAutoHideAsync();
 
 const Stack = createStackNavigator();
 
+// Χρησιμοποιούμε Dark Theme για να ταιριάζει
 const theme = {
-  ...MD3LightTheme,
+  ...MD3DarkTheme,
   colors: {
-    ...MD3LightTheme.colors,
-    primary: '#121212',
-    secondary: '#333333',
+    ...MD3DarkTheme.colors,
+    primary: '#ffffff', // Λευκά στοιχεία
+    background: '#121212', // Μαύρο φόντο
   },
 };
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(1)).current; // Ξεκινάει με Opacity 1 (Φαίνεται)
+  const fadeAnim = useRef(new Animated.Value(1)).current; // Ξεκινάει ορατό (Opacity 1)
 
   useEffect(() => {
     async function prepare() {
       try {
-        // Εδώ θα μπορούσαμε να φορτώσουμε γραμματοσειρές ή δεδομένα
-        // Προς το παρόν απλά περιμένουμε λίγο για να φανεί το εφέ
-        await new Promise(resolve => setTimeout(resolve, 2000)); 
+        // Εδώ περιμένουμε 2.5 δευτερόλεπτα. Σε αυτό το διάστημα,
+        // ο χρήστης βλέπει το Native Splash Screen που είναι μαύρο.
+        await new Promise(resolve => setTimeout(resolve, 2500));
       } catch (e) {
         console.warn(e);
       } finally {
+        // Δηλώνουμε ότι η εφαρμογή είναι έτοιμη
         setAppIsReady(true);
       }
     }
-
     prepare();
   }, []);
 
-  // Όταν το App είναι έτοιμο, κρύβουμε το Native Splash και ξεκινάμε το Fade Out
   useEffect(() => {
     if (appIsReady) {
-      // 1. Κρύβουμε το στατικό εικονίδιο του Expo
-      SplashScreen.hideAsync();
+      // Μόλις είμαστε έτοιμοι:
+      const transition = async () => {
+        // 1. Κρύβουμε το Native Splash. Επειδή το δικό μας custom view
+        // από κάτω είναι ΙΔΙΟ (μαύρο), η αλλαγή είναι αόρατη.
+        await SplashScreen.hideAsync();
 
-      // 2. Ξεκινάμε το animation εξαφάνισης της μαύρης οθόνης
-      Animated.timing(fadeAnim, {
-        toValue: 0,       // Πάει στο 0 (αόρατο)
-        duration: 800,    // Διαρκεί 800ms (Smooth)
-        useNativeDriver: true,
-      }).start();
+        // 2. Ξεκινάμε το Fade Out του δικού μας view
+        Animated.timing(fadeAnim, {
+          toValue: 0,      // Πάει σε διαφάνεια 0
+          duration: 800,   // Μέσα σε 0.8 δευτερόλεπτα
+          useNativeDriver: true,
+        }).start();
+      };
+      transition();
     }
   }, [appIsReady]);
 
   return (
     <PaperProvider theme={theme}>
-      <View style={{ flex: 1 }}>
+      {/* Ρυθμίζουμε την μπάρα κατάστασης του κινητού να είναι ανοιχτόχρωμη */}
+      <StatusBar barStyle="light-content" backgroundColor="#121212" />
+      
+      <View style={{ flex: 1, backgroundColor: '#121212' }}>
         
-        {/* Η Κυρίως Εφαρμογή */}
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="Login">
-            <Stack.Screen 
-              name="Login" 
-              component={LoginScreen} 
-              options={{ headerShown: false }} 
-            />
-            <Stack.Screen 
-              name="MenuDashboard" 
-              component={MenuDashboard} 
-              options={{ headerShown: false }} 
-            />
+          <Stack.Navigator initialRouteName="Login" screenOptions={{ headerStyle: { backgroundColor: '#121212' }, headerTintColor: '#fff' }}>
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MenuDashboard" component={MenuDashboard} options={{ headerShown: false }} />
           </Stack.Navigator>
         </NavigationContainer>
 
-        {/* Το Custom Splash Screen που κάθεται ΠΑΝΩ από την εφαρμογή */}
+        {/* --- CUSTOM INTRO SCREEN --- */}
+        {/* Αυτό κάθεται ΠΑΝΩ από όλα μέχρι να εξαφανιστεί */}
         <Animated.View 
           style={[
             styles.splashContainer, 
-            { opacity: fadeAnim }, // Το δένουμε με το animation
-            { pointerEvents: appIsReady ? 'none' : 'auto' } // Όταν τελειώσει, να μην εμποδίζει τα κλικ
+            { opacity: fadeAnim },
+            // Όταν η διαφάνεια γίνει 0, σταματάμε να δεχόμαστε κλικ
+            { pointerEvents: fadeAnim._value === 0 ? 'none' : 'auto' } 
           ]}
         >
-          <Text style={styles.splashText}>MENU{"\n"}ADMINISTRATION</Text>
-          <Text style={styles.splashSubText}>POWERED BY THERISTIS</Text>
+          <Text style={styles.splashTitle}>MENU</Text>
+          <Text style={styles.splashSubtitle}>ADMINISTRATOR</Text>
+          
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>POWERED BY THERISTIS</Text>
+          </Animated.View>
         </Animated.View>
 
       </View>
@@ -98,25 +103,31 @@ export default function App() {
 const styles = StyleSheet.create({
   splashContainer: {
     ...StyleSheet.absoluteFillObject, // Πιάνει όλη την οθόνη
-    backgroundColor: '#121212',       // Μαύρο φόντο
+    backgroundColor: '#121212',       // ΑΠΟΛΥΤΟ ΜΑΥΡΟ
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,                     // Είναι πάνω από όλα
+    zIndex: 9999,                     // Πάντα στην κορυφή
   },
-  splashText: {
+  splashTitle: {
     color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 4,                 // Αραιά γράμματα για style
-    lineHeight: 40
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
-  splashSubText: {
+  splashSubtitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '300',
+    letterSpacing: 4,
+    marginTop: 5,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 50,
+  },
+  footerText: {
     color: '#666666',
     fontSize: 10,
-    marginTop: 20,
     letterSpacing: 2,
-    position: 'absolute',
-    bottom: 50
   }
 });

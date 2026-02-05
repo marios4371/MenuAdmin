@@ -4,46 +4,40 @@
     "slug": "MenuAdmin",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/shop-icon.png",
     "scheme": "menuadmin",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#121212",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.theristis.menuadmin"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#121212",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/shop-icon.png",
+        "backgroundColor": "#121212"
       },
-      "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#121212"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
+      "package": "com.theristis.menuadmin",
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.ioqr_menus.MenuAdmin"
+      "backgroundColor": "#121212"
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "splash": {
+      "image": "./assets/images/shop-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#121212",
+          "image": "./assets/images/shop-icon.png",
+          "imageWidth": 150
         }
       ]
     ],
@@ -52,9 +46,8 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
       "eas": {
-        "projectId": "06d6a291-a47a-4eb5-a0da-3ff9d3f06eb0"
+        "projectId": "your-project-id-here"
       }
     }
   }
