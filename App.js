@@ -9,12 +9,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import LoginScreen from './src/screens/LoginScreen';
 import MenuDashboard from './src/screens/MenuDashboard';
 
-// Κρατάμε το Native Splash visible μέχρι να είμαστε έτοιμοι
+// Κρατάμε το Native Splash visible μέχρι να φορτώσει η React Native
 SplashScreen.preventAutoHideAsync();
 
 const Stack = createStackNavigator();
 
-// Χρησιμοποιούμε Dark Theme
 const theme = {
   ...MD3DarkTheme,
   colors: {
@@ -26,13 +25,14 @@ const theme = {
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false); // Νέο state για να εξαφανίζουμε τελείως το intro
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     async function prepare() {
       try {
-        // Περιμένουμε 2.5 δευτερόλεπτα
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        // Εδώ δεν βάζουμε καθυστέρηση πλέον.
+        // Θέλουμε να φύγει το Native Splash αμέσως για να δούμε το δικό μας Text.
       } catch (e) {
         console.warn(e);
       } finally {
@@ -44,15 +44,28 @@ export default function App() {
 
   useEffect(() => {
     if (appIsReady) {
-      const transition = async () => {
+      const runAnimation = async () => {
+        // 1. Κρύβουμε το Native Splash ΑΜΕΣΩΣ
         await SplashScreen.hideAsync();
+
+        // 2. Τώρα ο χρήστης βλέπει το "MENU ADMINISTRATOR".
+        // Περιμένουμε 3 δευτερόλεπτα ΝΑ ΤΟ ΒΛΕΠΕΙ.
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // 3. Ξεκινάμε το Fade Out
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 800,
+          duration: 1000, // Πιο αργό σβήσιμο (1 δευτερόλεπτο)
           useNativeDriver: true,
-        }).start();
+        }).start(() => {
+          // 4. Μόλις τελειώσει το animation, θέτουμε αυτό σε true
+          // για να αφαιρεθεί τελείως το View από την οθόνη.
+          // Έτσι το Login θα λειτουργεί σίγουρα.
+          setSplashAnimationFinished(true);
+        });
       };
-      transition();
+
+      runAnimation();
     }
   }, [appIsReady]);
 
@@ -70,22 +83,22 @@ export default function App() {
         </NavigationContainer>
 
         {/* --- CUSTOM INTRO SCREEN --- */}
-        <Animated.View 
-          style={[
-            styles.splashContainer, 
-            { opacity: fadeAnim },
-            { pointerEvents: fadeAnim._value === 0 ? 'none' : 'auto' } 
-          ]}
-        >
-          <Text style={styles.splashTitle}>MENU</Text>
-          <Text style={styles.splashSubtitle}>ADMINISTRATOR</Text>
-          
-          {/* ΔΙΟΡΘΩΣΗ ΕΔΩ: Κλείνουμε σωστά το View */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>POWERED BY THERISTIS</Text>
-          </View>
-
-        </Animated.View>
+        {/* Εμφανίζεται ΜΟΝΟ αν δεν έχει τελειώσει το animation */}
+        {!splashAnimationFinished && (
+          <Animated.View 
+            style={[
+              styles.splashContainer, 
+              { opacity: fadeAnim }
+            ]}
+          >
+            <Text style={styles.splashTitle}>MENU</Text>
+            <Text style={styles.splashSubtitle}>ADMINISTRATOR</Text>
+            
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>POWERED BY THERISTIS</Text>
+            </View>
+          </Animated.View>
+        )}
 
       </View>
     </PaperProvider>
@@ -98,7 +111,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 9999,
+    zIndex: 9999, // Πάνω από όλα
   },
   splashTitle: {
     color: '#FFFFFF',
