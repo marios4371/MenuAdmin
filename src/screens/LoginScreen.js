@@ -3,11 +3,6 @@ import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } f
 import { TextInput, Button, Text, Card } from 'react-native-paper';
 import { api } from '../services/api';
 
-const COLORS = {
-  primary: '#121212',
-  background: '#F4F4F4',
-};
-
 export default function LoginScreen({ navigation }) {
   const [shopId, setShopId] = useState('');
   const [password, setPassword] = useState('');
@@ -48,7 +43,10 @@ export default function LoginScreen({ navigation }) {
                 dense
                 style={styles.input}
                 autoCapitalize="none"
-                activeOutlineColor={COLORS.primary}
+                activeOutlineColor="black"
+                outlineColor="#ccc"
+                textColor="black"
+                theme={{ colors: { background: 'white' } }}
               />
               <TextInput
                 label="PASSWORD"
@@ -58,7 +56,10 @@ export default function LoginScreen({ navigation }) {
                 mode="outlined"
                 dense
                 style={styles.input}
-                activeOutlineColor={COLORS.primary}
+                activeOutlineColor="black"
+                outlineColor="#ccc"
+                textColor="black"
+                theme={{ colors: { background: 'white' } }}
               />
 
               <Button 
@@ -66,7 +67,8 @@ export default function LoginScreen({ navigation }) {
                 onPress={handleLogin} 
                 loading={loading}
                 style={styles.button}
-                buttonColor={COLORS.primary}
+                buttonColor="black"
+                textColor="white"
               >
                 LOGIN
               </Button>
@@ -79,12 +81,12 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
   scrollContainer: { flexGrow: 1, justifyContent: 'center' },
   content: { padding: 20 },
-  title: { textAlign: 'center', marginBottom: 5, fontWeight: 'bold', color: COLORS.primary, letterSpacing: 1 },
+  title: { textAlign: 'center', marginBottom: 5, fontWeight: 'bold', color: 'black', letterSpacing: 1 },
   subtitle: { textAlign: 'center', marginBottom: 30, color: '#666', fontSize: 12 },
   card: { backgroundColor: 'white', borderRadius: 4 },
-  input: { marginBottom: 15, backgroundColor: '#fff' },
+  input: { marginBottom: 15 },
   button: { marginTop: 10, borderRadius: 4, paddingVertical: 4 }
 });
