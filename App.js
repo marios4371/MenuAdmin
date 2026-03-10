@@ -85,9 +85,9 @@ export default function App() {
         {/* --- CUSTOM INTRO SCREEN --- */}
         {/* Εμφανίζεται ΜΟΝΟ αν δεν έχει τελειώσει το animation */}
         {!splashAnimationFinished && (
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.splashContainer, 
+              styles.splashContainer,
               { opacity: fadeAnim }
             ]}
           >
@@ -95,7 +95,7 @@ export default function App() {
             <Text style={styles.splashSubtitle}>ADMINISTRATOR</Text>
             
             <View style={styles.footer}>
-              <Text style={styles.footerText}>POWERED BY THERISTIS</Text>
+              <Text style={styles.footerText}>POWERED BY QRServicesIO</Text>
             </View>
           </Animated.View>
         )}

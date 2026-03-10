@@ -1,38 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert, RefreshControl, KeyboardAvoidingView, Platform, BackHandler, TouchableOpacity } from 'react-native';
-import { Text, Card, Button, IconButton, ActivityIndicator, FAB, Divider, TextInput } from 'react-native-paper';
+import { Text, Card, Button, IconButton, ActivityIndicator, FAB, Divider, TextInput, Menu } from 'react-native-paper'; 
 import { api } from '../services/api';
+import { CommonActions } from '@react-navigation/native'; 
 
-// ΑΥΣΤΗΡΗ ΜΑΥΡΟΑΣΠΡΗ ΠΑΛΕΤΑ
 const COLORS = {
-  primary: '#000000',    // Μαύρο
-  background: '#F4F4F4', // Ανοιχτό Γκρι
-  card: '#FFFFFF',       // Λευκό
-  text: '#000000',       // Μαύρο
-  subtext: '#666666',    // Σκούρο Γκρι
-  border: '#000000',     // Μαύρο περίγραμμα
+  primary: '#000000',    
+  background: '#F4F4F4', 
+  card: '#FFFFFF',       
+  text: '#000000',       
+  subtext: '#666666',    
+  border: '#000000',     
 };
 
 export default function MenuDashboard({ route, navigation }) {
   const { shopId, password } = route.params;
 
+  const [fullShopData, setFullShopData] = useState({}); // SOS: Κρατάει όλο το JSON άθικτο (μαζί με features)
   const [menuData, setMenuData] = useState([]);
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState('LIST');
-  const [expandedCategories, setExpandedCategories] = useState({}); 
+  
+  const [openCategoryIndex, setOpenCategoryIndex] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Data Holders
   const [editingCatIndex, setEditingCatIndex] = useState(null);
   const [editingProdCoords, setEditingProdCoords] = useState(null);
   const [tempCatTitle, setTempCatTitle] = useState('');
-  const [tempProd, setTempProd] = useState({ name: '', description: '', price: '' });
+  const [tempProd, setTempProd] = useState({ name: '', description: '', price: '', station: 'KITCHEN' });
 
   const loadMenu = async () => {
     setLoading(true);
     const data = await api.getMenuData(shopId, password);
     if (data) {
+      setFullShopData(data); // Αποθηκεύουμε τα πάντα (και το features)
       setMenuData(data.menu || []);
       setSettings(data.settings || {});
     } else {
@@ -49,22 +53,39 @@ export default function MenuDashboard({ route, navigation }) {
         setViewMode('LIST');
         return true;
       }
-      return false;
+      return false; 
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
   }, [viewMode]);
 
   const toggleCategory = (index) => {
-    setExpandedCategories(prev => ({ ...prev, [index]: !prev[index] }));
+    setOpenCategoryIndex(prev => prev === index ? null : index);
+  };
+
+  const handleLogout = () => {
+    setMenuVisible(false);
+    navigation.dispatch(
+        CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+        })
+    );
   };
 
   const saveChanges = async (updatedMenu) => {
     setSaving(true);
-    const fullData = { menu: updatedMenu, settings: settings };
-    const result = await api.saveMenuData(shopId, password, fullData);
+    // ΠΡΟΣΟΧΗ: Ενώνουμε το παλιό JSON με το νέο menu, ώστε να μην χαθεί το "features"
+    const dataToSave = {
+        ...fullShopData,
+        menu: updatedMenu,
+        settings: settings
+    };
+    
+    const result = await api.saveMenuData(shopId, password, dataToSave);
     setSaving(false);
     if (result.success) {
+      setFullShopData(dataToSave);
       setMenuData(updatedMenu);
       setViewMode('LIST');
     } else {
@@ -102,6 +123,7 @@ export default function MenuDashboard({ route, navigation }) {
       { text: "Delete", style: 'destructive', onPress: () => {
           const newMenu = [...menuData];
           newMenu.splice(index, 1);
+          if (openCategoryIndex === index) setOpenCategoryIndex(null);
           saveChanges(newMenu);
       }}
     ]);
@@ -110,10 +132,11 @@ export default function MenuDashboard({ route, navigation }) {
   const openProductEdit = (catIndex, prodIndex = null) => {
     if (prodIndex !== null) {
       setEditingProdCoords({ catIndex, prodIndex });
+      // SOS: Κάνουμε copy (...) όλο το αντικείμενο για να μην χαθεί το station ή το productId!
       setTempProd({ ...menuData[catIndex].items[prodIndex] });
     } else {
       setEditingProdCoords({ catIndex, prodIndex: null });
-      setTempProd({ name: '', description: '', price: '' });
+      setTempProd({ name: '', description: '', price: '', station: 'KITCHEN' });
     }
     setViewMode('EDIT_PROD');
   };
@@ -147,7 +170,34 @@ export default function MenuDashboard({ route, navigation }) {
   const renderList = () => (
     <>
       <View style={styles.header}>
-        <Text variant="titleMedium" style={{color:'#fff', fontWeight:'bold', letterSpacing:1}}>SHOP: {shopId.toUpperCase()}</Text>
+        <View style={styles.shopTitleRow}>
+            <Text variant="titleMedium" style={{color:'#fff', fontWeight:'bold', letterSpacing:1}}>
+                SHOP: {shopId.toUpperCase()}
+            </Text>
+            
+            <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                    <IconButton
+                        icon="chevron-down"
+                        iconColor="white"
+                        size={20}
+                        onPress={() => setMenuVisible(true)}
+                        style={{ margin: 0 }}
+                    />
+                }
+                contentStyle={{ backgroundColor: 'white' }}
+            >
+                <Menu.Item
+                    onPress={handleLogout}
+                    title="Logout"
+                    titleStyle={{ color: 'black' }} 
+                    leadingIcon="logout"
+                />
+            </Menu>
+        </View>
+
         <IconButton icon="refresh" iconColor="#fff" onPress={loadMenu} />
       </View>
 
@@ -155,7 +205,7 @@ export default function MenuDashboard({ route, navigation }) {
         {menuData.length === 0 && <Text style={{textAlign:'center', marginTop: 40, color:'#888'}}>No categories.</Text>}
         
         {menuData.map((category, catIndex) => {
-          const isExpanded = expandedCategories[catIndex];
+          const isExpanded = openCategoryIndex === catIndex;
 
           return (
             <Card key={category.id || catIndex} style={styles.card} mode="elevated">
@@ -172,9 +222,9 @@ export default function MenuDashboard({ route, navigation }) {
                   )}
 
                   <IconButton 
-                    icon={isExpanded ? "chevron-down" : "chevron-up"} 
-                    iconColor="black" 
-                    size={24} 
+                    icon={isExpanded ? "chevron-down" : "chevron-up"}
+                    iconColor="black"
+                    size={24}
                     onPress={() => toggleCategory(catIndex)} 
                     style={{margin:0}}
                   />
@@ -182,35 +232,37 @@ export default function MenuDashboard({ route, navigation }) {
               
               <Divider />
 
-              {isExpanded && category.items.map((item, prodIndex) => (
-                  <View key={prodIndex} style={styles.productRow}>
-                      
-                      <TouchableOpacity style={{flex: 1}} onPress={() => openProductEdit(catIndex, prodIndex)}>
-                          <Text style={styles.prodName}>{item.name}</Text>
-                          {item.description ? <Text style={styles.prodDesc} numberOfLines={1}>{item.description}</Text> : null}
-                          <Text style={styles.prodPrice}>{item.price}</Text>
-                      </TouchableOpacity>
+              {isExpanded && (
+                <View>
+                  {category.items.map((item, prodIndex) => (
+                      <View key={prodIndex} style={styles.productRow}>
+                          
+                          <TouchableOpacity style={{flex: 1}} onPress={() => openProductEdit(catIndex, prodIndex)}>
+                              <Text style={styles.prodName}>{item.name}</Text>
+                              {item.description ? <Text style={styles.prodDesc} numberOfLines={1}>{item.description}</Text> : null}
+                              <Text style={styles.prodPrice}>{item.price} <Text style={{fontSize: 10, color: '#999', fontWeight: 'normal'}}>• {item.station || 'KITCHEN'}</Text></Text>
+                          </TouchableOpacity>
 
-                      <Button 
-                        mode="outlined" 
-                        compact 
-                        onPress={() => handleDeleteProduct(catIndex, prodIndex)} 
-                        style={styles.actionBtn} 
-                        labelStyle={styles.actionBtnLabel}
-                        textColor="black"
-                      >
-                        Delete
-                      </Button>
-
-                  </View>
-              ))}
+                          <Button
+                            mode="outlined"
+                            compact
+                            onPress={() => handleDeleteProduct(catIndex, prodIndex)}
+                            style={styles.actionBtn}
+                            labelStyle={styles.actionBtnLabel}
+                            textColor="black"
+                          >
+                            Delete
+                          </Button>
+                      </View>
+                  ))}
+                </View>
+              )}
             </Card>
           );
         })}
         <View style={{height: 100}} />
       </ScrollView>
 
-      {/* FAB: ΜΑΥΡΟ ΚΟΥΜΠΙ */}
       <FAB 
         icon="plus" 
         color="white" 
@@ -245,8 +297,8 @@ export default function MenuDashboard({ route, navigation }) {
                         mode="contained" 
                         onPress={onSave} 
                         style={{flex:1}} 
-                        buttonColor="black" // ΜΑΥΡΟ ΚΟΥΜΠΙ
-                        textColor="white"   // ΑΣΠΡΑ ΓΡΑΜΜΑΤΑ
+                        buttonColor="black"
+                        textColor="white"
                         loading={saving}
                     >
                         Save
@@ -272,6 +324,29 @@ export default function MenuDashboard({ route, navigation }) {
             <TextInput label="NAME" value={tempProd.name} onChangeText={(t) => setTempProd({...tempProd, name: t})} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
             <TextInput label="PRICE" value={tempProd.price} onChangeText={(t) => setTempProd({...tempProd, price: t})} mode="outlined" keyboardType="numbers-and-punctuation" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
             <TextInput label="DESCRIPTION" value={tempProd.description} onChangeText={(t) => setTempProd({...tempProd, description: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+            
+            {/* ΝΕΟ: ΕΠΙΛΟΓΗ STATION (BAR Ή KITCHEN) */}
+            <Text style={{marginBottom: 8, marginTop: 10, fontWeight: 'bold', fontSize: 12, color: '#666'}}>STATION</Text>
+            <View style={{flexDirection: 'row', gap: 10, marginBottom: 20}}>
+                <Button 
+                    mode={tempProd.station === 'BAR' ? 'contained' : 'outlined'} 
+                    onPress={() => setTempProd({...tempProd, station: 'BAR'})}
+                    style={{flex: 1, borderColor: 'black'}}
+                    buttonColor={tempProd.station === 'BAR' ? 'black' : 'transparent'}
+                    textColor={tempProd.station === 'BAR' ? 'white' : 'black'}
+                >
+                    BAR
+                </Button>
+                <Button 
+                    mode={tempProd.station === 'KITCHEN' ? 'contained' : 'outlined'} 
+                    onPress={() => setTempProd({...tempProd, station: 'KITCHEN'})}
+                    style={{flex: 1, borderColor: 'black'}}
+                    buttonColor={tempProd.station === 'KITCHEN' ? 'black' : 'transparent'}
+                    textColor={tempProd.station === 'KITCHEN' ? 'white' : 'black'}
+                >
+                    KITCHEN
+                </Button>
+            </View>
           </>,
           saveProduct
       );
@@ -284,6 +359,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { padding: 10, paddingTop: 40, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', elevation:4 },
+  
+  shopTitleRow: { flexDirection: 'row', alignItems: 'center' },
+
   scrollContent: { padding: 12 },
   card: { marginBottom: 12, backgroundColor: COLORS.card, borderRadius: 4 },
   

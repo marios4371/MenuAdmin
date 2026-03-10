@@ -1,50 +1,96 @@
-// src/services/api.js
-import axios from 'axios';
+// services/api.js
 
-// ΒΑΛΕ ΕΔΩ ΤΟ URL ΤΟΥ LAMBDA ΣΟΥ (Χωρίς το / στο τέλος)
+
 const BASE_URL = 'https://jqh5mcshzzlag7z26d76elkf6u0vtgzw.lambda-url.eu-central-1.on.aws';
 
 export const api = {
-  // 1. Login Function
-  login: async (shop_id, password) => {
+  login: async (shopId, password) => {
+    console.log(`[LOGIN ATTEMPT] Connecting to: ${BASE_URL}/login`);
+    console.log(`[PAYLOAD] Shop: ${shopId}, Pass: ${password}`);
+
     try {
-      const response = await axios.post(`${BASE_URL}/login`, {
-        shop_id,
-        password
+      const response = await fetch(`${BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json' // Λέμε στον server ότι θέλουμε JSON
+        },
+        body: JSON.stringify({ shopId, password }) // Προσοχή: το backend περιμένει { shopId, password }
       });
-      return response.data; // { success: true, message: "..." }
+
+      console.log(`[STATUS] Response Code: ${response.status}`);
+
+      // ΑΝ ΔΕΝ ΕΙΝΑΙ 200 (OK), ΔΙΑΒΑΣΕ ΤΟ ΚΕΙΜΕΝΟ ΤΟΥ ΛΑΘΟΥΣ
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[SERVER ERROR] Body: ${errorText}`);
+        return { success: false, error: `Server Error (${response.status}): ${errorText}` };
+      }
+
+      // ΑΝ ΕΙΝΑΙ 200, ΚΑΝΕ PARSE ΤΟ JSON
+      const data = await response.json();
+      console.log(`[SUCCESS] Data:`, data);
+      return data;
+
     } catch (error) {
-      console.error("Login Error:", error.response?.data || error.message);
-      return { success: false, message: "Connection Error" };
+      console.error("[NETWORK CRASH]", error);
+      return { success: false, error: "Network Error or CORS. Check Console." };
     }
   },
 
-  // 2. Get Data Function
-  getMenuData: async (shop_id, password) => {
+  // 2. GET FULL DATA
+  getFullData: async (shopId, password) => {
     try {
-      const response = await axios.post(`${BASE_URL}/get-data`, {
-        shop_id,
-        password
-      });
-      return response.data; // Επιστρέφει όλο το JSON του μαγαζιού
+        const response = await fetch(`${BASE_URL}/get-full-data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shopId, password }),
+        });
+        
+        if (!response.ok) return { success: false, error: "Failed to load data" };
+
+        const data = await response.json();
+
+        // --- SMART FIX ---
+        if (data.menu && !Array.isArray(data.menu) && Array.isArray(data.menu.menu)) {
+            data.menu = data.menu.menu;
+        }
+        if (!Array.isArray(data.menu)) {
+            data.menu = [];
+        }
+
+        return data;
+
     } catch (error) {
-      console.error("Get Data Error:", error);
-      return null;
+        return { success: false, error: error.message };
     }
   },
 
-  // 3. Save Data Function (Θα το χρειαστούμε αργότερα)
-  saveMenuData: async (shop_id, password, newData) => {
+  // Alias για συμβατότητα με το UI
+  getMenuData: async (shopId, password) => {
+      return api.getFullData(shopId, password);
+  },
+
+  // 3. SAVE MENU
+  saveMenu: async (shopId, password, fullShopData) => {
     try {
-      const response = await axios.post(`${BASE_URL}/save-data`, {
-        shop_id,
-        password,
-        newData
-      });
-      return response.data;
+        const response = await fetch(`${BASE_URL}/save-menu`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                shopId,
+                password,
+                data: fullShopData // ΠΛΕΟΝ ΣΤΕΛΝΕΙ ΟΛΟΚΛΗΡΟ ΤΟ ΑΝΤΙΚΕΙΜΕΝΟ ΑΘΙΚΤΟ
+            }),
+        });
+        return await response.json();
     } catch (error) {
-      console.error("Save Error:", error);
-      return { success: false };
+        return { success: false, error: error.message };
     }
+  },
+
+  // Alias για συμβατότητα με το UI
+  saveMenuData: async (shopId, password, fullShopData) => {
+      return api.saveMenu(shopId, password, fullShopData);
   }
 };
