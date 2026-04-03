@@ -112,7 +112,23 @@ export default function MenuDashboard({ route, navigation }) {
       newMenu[editingCatIndex].title = tempCatTitle;
     } else {
       const newId = tempCatTitle.toLowerCase().replace(/ /g, '-') + '-' + Date.now();
-      newMenu.push({ id: newId, title: tempCatTitle, items: [] });
+      const newCategory = { id: newId, title: tempCatTitle, items: [] };
+
+      const DAILY_TITLE = 'ΠΙΆΤΑ ΗΜΈΡΑΣ';
+      const ANCHOR_TITLE = 'ΦΑΓΗΤΆ ΤΗΣ ΏΡΑΣ';
+
+      if (tempCatTitle.trim().toUpperCase() === DAILY_TITLE) {
+        const anchorIndex = newMenu.findIndex(
+          cat => cat.title.trim().toUpperCase() === ANCHOR_TITLE
+        );
+        if (anchorIndex !== -1) {
+          newMenu.splice(anchorIndex + 1, 0, newCategory);
+        } else {
+          newMenu.push(newCategory);
+        }
+      } else {
+        newMenu.push(newCategory);
+      }
     }
     saveChanges(newMenu);
   };
