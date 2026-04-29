@@ -62,7 +62,7 @@ export default function MenuDashboard({ route, navigation }) {
   const loadMenu = async () => {
     setLoading(true);
     const data = await api.getMenuData(shopId, password);
-    if (data) {
+    if (data && !data.error) {
       setFullShopData(data); // Αποθηκεύουμε τα πάντα (και το features)
       setMenuData(data.menu || []);
       setSettings(data.settings || {});
@@ -100,7 +100,7 @@ export default function MenuDashboard({ route, navigation }) {
     );
   };
 
-  const saveChanges = async (updatedMenu) => {
+  const saveChanges = async (updatedMenu, skipViewReset  = false) => {
     setSaving(true);
     // ΠΡΟΣΟΧΗ: Ενώνουμε το παλιό JSON με το νέο menu, ώστε να μην χαθεί το "features"
     const dataToSave = {
@@ -285,7 +285,7 @@ export default function MenuDashboard({ route, navigation }) {
             <Card key={category.id || catIndex} style={styles.card} mode="elevated">
               
               <View style={styles.catHeader}>
-                <Text variant="titleMedium" style={styles.catTitle}>{category.title.toUpperCase()}</Text>
+                <Text variant="titleMedium" style={styles.catTitle}>{(category.title || '').toUpperCase()}</Text>
 
                 {isExpanded && (
                     <View style={styles.actionButtonsRow}>
