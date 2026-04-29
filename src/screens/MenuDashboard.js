@@ -2,15 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert, RefreshControl, KeyboardAvoidingView, Platform, BackHandler, TouchableOpacity } from 'react-native';
 import { Text, Card, Button, IconButton, ActivityIndicator, FAB, Divider, TextInput, Menu } from 'react-native-paper'; 
 import { api } from '../services/api';
-import { CommonActions } from '@react-navigation/native'; 
+import { CommonActions } from '@react-navigation/native';
 
 const COLORS = {
-  primary: '#000000',    
-  background: '#F4F4F4', 
-  card: '#FFFFFF',       
-  text: '#000000',       
-  subtext: '#666666',    
-  border: '#000000',     
+  primary: '#000000',
+  background: '#F4F4F4',
+  card: '#FFFFFF',
+  text: '#000000',
+  subtext: '#666666',
+  border: '#000000',
 };
 
 const ToggleSwitch = ({ value, onToggle }) => {
@@ -58,17 +58,19 @@ export default function MenuDashboard({ route, navigation }) {
   const [tempCatTitleEn, setTempCatTitleEn] = useState('');
   const [tempCatTitleDe, setTempCatTitleDe] = useState('');
   const [tempProd, setTempProd] = useState({ name: '', name_en: '', name_de: '', description: '', description_en: '', description_de: '', price: '', station: 'KITCHEN' });
+  // Position
+  const [tempCatPosition, setTempCatPosition] = useState(null);
+  const [tempProdPosition, setTempProdPosition] = useState(null);
 
   const loadMenu = async () => {
     setLoading(true);
     const data = await api.getMenuData(shopId, password);
     if (data && !data.error) {
       setFullShopData(data);
-      setFullShopData(data); // Αποθηκεύουμε τα πάντα (και το features)
       setMenuData(data.menu || []);
       setSettings(data.settings || {});
     } else {
-      Alert.alert("Error", "Could not load menu data");
+      Alert.alert("Error", data?.error || "Could not load menu data");
     }
     setLoading(false);
   };
@@ -101,6 +103,28 @@ export default function MenuDashboard({ route, navigation }) {
     );
   };
 
+  // Position Handlng for Categories & Products
+  const moveCategory = (index, direction) => {
+    const newMenu = [...menuData];
+    const target = index + direction;
+    if (target < 0 || target >= newMenu.length) return;
+    [newMenu[index], newMenu[target]] = [newMenu[target], newMenu[index]];
+    if (openCategoryIndex === index) setOpenCategoryIndex(target);
+    else if (openCategoryIndex === target) setOpenCategoryIndex(index);
+    saveChanges(newMenu, true);
+  };
+
+  const moveProduct = (catIndex, prodIndex, direction) => {
+    const newMenu = [...menuData];
+    const items = [...newMenu[catIndex].items];
+    const target = prodIndex + direction;
+    if (target < 0 || target >= items.length) return;
+    [items[prodIndex], items[target]] = [items[target], items[prodIndex]];
+    newMenu[catIndex] = { ...newMenu[catIndex], items };
+    saveChanges(newMenu, true);
+  };
+
+  // Save Changes to API
   const saveChanges = async (updatedMenu, skipViewReset  = false) => {
     setSaving(true);
     // ΠΡΟΣΟΧΗ: Ενώνουμε το παλιό JSON με το νέο menu, ώστε να μην χαθεί το "features"
@@ -133,6 +157,7 @@ export default function MenuDashboard({ route, navigation }) {
       setTempCatTitle('');
       setTempCatTitleEn('');
       setTempCatTitleDe('');
+      setTempCatPosition(null);
     }
     setViewMode('EDIT_CAT');
   };
@@ -156,7 +181,9 @@ export default function MenuDashboard({ route, navigation }) {
       const DAILY_TITLE  = 'ΠΙΆΤΑ ΗΜΈΡΑΣ';
       const ANCHOR_TITLE = 'ΦΑΓΗΤΆ ΤΗΣ ΏΡΑΣ';
 
-      if (tempCatTitle.trim().toUpperCase() === DAILY_TITLE) {
+      if (tempCatPosition !== null) {
+        newMenu.splice(tempCatPosition, 0, newCategory);
+      } else if (tempCatTitle.trim().toUpperCase() === DAILY_TITLE) {
         const anchorIndex = newMenu.findIndex(
           cat => cat.title.trim().toUpperCase() === ANCHOR_TITLE
         );
@@ -211,8 +238,8 @@ export default function MenuDashboard({ route, navigation }) {
     } else {
       setEditingProdCoords({ catIndex, prodIndex: null });
       setTempProd({ name: '', name_en: '', name_de: '', description: '', description_en: '', description_de: '', price: '', station: 'KITCHEN' });
-
-    }
+      setTempProdPosition(null);
+  }
     setViewMode('EDIT_PROD');
   };
 
@@ -223,7 +250,10 @@ export default function MenuDashboard({ route, navigation }) {
     if (prodIndex !== null) {
       newMenu[catIndex].items[prodIndex] = tempProd;
     } else {
-      newMenu[catIndex].items.push(tempProd);
+      const insertAt = tempProdPosition !== null
+        ? Math.min(tempProdPosition, newMenu[catIndex].items.length)
+        : newMenu[catIndex].items.length;
+      newMenu[catIndex].items.splice(insertAt, 0, tempProd);
     }
     saveChanges(newMenu);
   };
@@ -290,7 +320,6 @@ export default function MenuDashboard({ route, navigation }) {
 
                 {isExpanded && (
                     <View style={styles.actionButtonsRow}>
-                        {/* Toggle μόνο για ΠΙΆΤΑ ΗΜΈΡΑΣ */}
                         {category.id === DAILY_ID && (
                             <ToggleSwitch
                                 value={category.enable ?? 0}
@@ -302,6 +331,25 @@ export default function MenuDashboard({ route, navigation }) {
                         <Button mode="outlined" compact onPress={() => handleDeleteCategory(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Delete</Button>
                     </View>
                 )}
+
+                  <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                      <IconButton
+                          icon="arrow-up"
+                          iconColor={catIndex === 0 ? '#ccc' : 'black'}
+                          size={16}
+                          onPress={() => moveCategory(catIndex, -1)}
+                          disabled={catIndex === 0}
+                          style={{ margin: 0, height: 22 }}
+                      />
+                      <IconButton
+                          icon="arrow-down"
+                          iconColor={catIndex === menuData.length - 1 ? '#ccc' : 'black'}
+                          size={16}
+                          onPress={() => moveCategory(catIndex, 1)}
+                          disabled={catIndex === menuData.length - 1}
+                          style={{ margin: 0, height: 22 }}
+                      />
+                  </View>
 
                   <IconButton
                     icon={isExpanded ? "chevron-down" : "chevron-up"}
@@ -324,7 +372,6 @@ export default function MenuDashboard({ route, navigation }) {
                               <Text style={styles.prodPrice}>{item.price} ...</Text>
                           </TouchableOpacity>
 
-                          {/* Toggle μόνο για items του ΠΙΆΤΑ ΗΜΈΡΑΣ */}
                           {category.id === DAILY_ID && (
                               <ToggleSwitch
                                   value={item.enable ?? 0}
@@ -332,7 +379,35 @@ export default function MenuDashboard({ route, navigation }) {
                               />
                           )}
 
-                          <Button mode="outlined" compact onPress={() => handleDeleteProduct(catIndex, prodIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Delete</Button>
+                          <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                              <IconButton
+                                  icon="arrow-up"
+                                  iconColor={prodIndex === 0 ? '#ccc' : 'black'}
+                                  size={14}
+                                  onPress={() => moveProduct(catIndex, prodIndex, -1)}
+                                  disabled={prodIndex === 0}
+                                  style={{ margin: 0, height: 20 }}
+                              />
+                              <IconButton
+                                  icon="arrow-down"
+                                  iconColor={prodIndex === (category.items || []).length - 1 ? '#ccc' : 'black'}
+                                  size={14}
+                                  onPress={() => moveProduct(catIndex, prodIndex, 1)}
+                                  disabled={prodIndex === (category.items || []).length - 1}
+                                  style={{ margin: 0, height: 20 }}
+                              />
+                          </View>
+
+                          <Button
+                            mode="outlined"
+                            compact
+                            onPress={() => handleDeleteProduct(catIndex, prodIndex)}
+                            style={styles.actionBtn}
+                            labelStyle={styles.actionBtnLabel}
+                            textColor="black"
+                          >
+                            Delete
+                          </Button>
                       </View>
                   ))}
                 </View>
@@ -400,12 +475,37 @@ export default function MenuDashboard({ route, navigation }) {
                     <TextInput label="NAME (DE)" value={tempCatTitleDe} onChangeText={setTempCatTitleDe} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
                 </>
             )}
+            {editingCatIndex === null && (
+                <>
+                    <Text style={{marginBottom: 8, marginTop: 10, fontWeight: 'bold', fontSize: 12, color: '#666'}}>ΘΕΣΗ (κενό = τέλος)</Text>
+                    <TextInput
+                        label={`Θέση 1 – ${menuData.length + 1}`}
+                        value={tempCatPosition !== null ? String(tempCatPosition + 1) : ''}
+                        onChangeText={(t) => {
+                            if (!t.trim()) { setTempCatPosition(null); return; }
+                            const n = parseInt(t);
+                            if (!isNaN(n) && n >= 1 && n <= menuData.length + 1) setTempCatPosition(n - 1);
+                        }}
+                        mode="outlined"
+                        keyboardType="number-pad"
+                        style={styles.input}
+                        activeOutlineColor="black"
+                        outlineColor="#ccc"
+                        textColor="black"
+                        theme={{ colors: { background: 'white' } }}
+                    />
+                </>
+            )}
         </>,
         saveCategory
     );
   }
 
   if (viewMode === 'EDIT_PROD') {
+
+      const catItemCount = editingProdCoords
+        ? (menuData[editingProdCoords.catIndex]?.items || []).length
+        : 0;
       return renderForm(
           editingProdCoords?.prodIndex !== null ? 'EDIT PRODUCT' : 'NEW PRODUCT',
           <>
@@ -418,6 +518,29 @@ export default function MenuDashboard({ route, navigation }) {
                     <TextInput label="NAME (DE)" value={tempProd.name_de || ''} onChangeText={(t) => setTempProd({...tempProd, name_de: t})} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
                     <TextInput label="DESCRIPTION (EN)" value={tempProd.description_en || ''} onChangeText={(t) => setTempProd({...tempProd, description_en: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
                     <TextInput label="DESCRIPTION (DE)" value={tempProd.description_de || ''} onChangeText={(t) => setTempProd({...tempProd, description_de: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                </>
+            )}
+
+            {/*Για position, μόνο αν είναι νέα προσθήκη (prodIndex === null), γιατί αλλιώς θα μπερδευτεί με το υπάρχον position του προϊόντος*/}
+            {editingProdCoords?.prodIndex === null && (
+                <>
+                    <Text style={{marginBottom: 8, marginTop: 10, fontWeight: 'bold', fontSize: 12, color: '#666'}}>ΘΕΣΗ (κενό = τέλος)</Text>
+                    <TextInput
+                        label={`Θέση 1 – ${catItemCount + 1}`}
+                        value={tempProdPosition !== null ? String(tempProdPosition + 1) : ''}
+                        onChangeText={(t) => {
+                            if (!t.trim()) { setTempProdPosition(null); return; }
+                            const n = parseInt(t);
+                            if (!isNaN(n) && n >= 1 && n <= catItemCount + 1) setTempProdPosition(n - 1);
+                        }}
+                        mode="outlined"
+                        keyboardType="number-pad"
+                        style={styles.input}
+                        activeOutlineColor="black"
+                        outlineColor="#ccc"
+                        textColor="black"
+                        theme={{ colors: { background: 'white' } }}
+                    />
                 </>
             )}
             {/* ΕΠΙΛΟΓΗ STATION (BAR Ή KITCHEN) */}
