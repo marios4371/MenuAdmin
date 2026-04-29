@@ -88,7 +88,32 @@ function denormalizeTabMenu(flatMenu, originalTabs) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const api = {
-  login: async (shopId, password) => { /* ... unchanged ... */ },
+  login: async (shopId, password) => {
+    console.log(`[LOGIN ATTEMPT] Connecting to: ${BASE_URL}/login`);
+    console.log(`[PAYLOAD] Shop: ${shopId}, Pass: ${password}`);
+    try {
+      const response = await fetch(`${BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ shopId, password })
+      });
+      console.log(`[STATUS] Response Code: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[SERVER ERROR] Body: ${errorText}`);
+        return { success: false, error: `Server Error (${response.status}): ${errorText}` };
+      }
+      const data = await response.json();
+      console.log(`[SUCCESS] Data:`, data);
+      return data;
+    } catch (error) {
+      console.error("[NETWORK CRASH]", error);
+      return { success: false, error: "Network Error or CORS. Check Console." };
+    }
+},
 
   getFullData: async (shopId, password) => {
     try {
