@@ -63,6 +63,7 @@ export default function MenuDashboard({ route, navigation }) {
     setLoading(true);
     const data = await api.getMenuData(shopId, password);
     if (data && !data.error) {
+      setFullShopData(data);
       setFullShopData(data); // Αποθηκεύουμε τα πάντα (και το features)
       setMenuData(data.menu || []);
       setSettings(data.settings || {});
@@ -315,7 +316,7 @@ export default function MenuDashboard({ route, navigation }) {
 
               {isExpanded && (
                 <View>
-                  {category.items.map((item, prodIndex) => (
+                  {(category.items || []).map((item, prodIndex) => (
                       <View key={prodIndex} style={styles.productRow}>
                           <TouchableOpacity style={{flex: 1}} onPress={() => openProductEdit(catIndex, prodIndex)}>
                               <Text style={styles.prodName}>{item.name}</Text>
