@@ -15,12 +15,12 @@ export const api = {
           'Content-Type': 'application/json',
           'Accept': 'application/json' // Λέμε στον server ότι θέλουμε JSON
         },
-        body: JSON.stringify({ shopId, password }) // Προσοχή: το backend περιμένει { shopId, password }
+        body: JSON.stringify({ shopId, password }) // το backend περιμένει { shopId, password }
       });
 
       console.log(`[STATUS] Response Code: ${response.status}`);
 
-      // ΑΝ ΔΕΝ ΕΙΝΑΙ 200 (OK), ΔΙΑΒΑΣΕ ΤΟ ΚΕΙΜΕΝΟ ΤΟΥ ΛΑΘΟΥΣ
+      // ΑΝ ΔΕΝ ΕΙΝΑΙ 200 (OK), ΔΙΑΒΑΣΕ ΤΟ ΚΕΙΜΕΝΟ ΤΟΥ ERROR
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[SERVER ERROR] Body: ${errorText}`);
