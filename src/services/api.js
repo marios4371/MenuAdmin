@@ -56,6 +56,7 @@ export const api = {
             data.menu = data.menu.menu;
         }
         if (!Array.isArray(data.menu)) {
+            console.warn('[API] Unexpected menu shape for shopId:', data.menu);
             data.menu = [];
         }
 
