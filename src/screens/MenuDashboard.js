@@ -13,6 +13,31 @@ const COLORS = {
   border: '#000000',     
 };
 
+const ToggleSwitch = ({ value, onToggle }) => {
+    const isEnabled = value === 1;
+    return (
+        <TouchableOpacity
+            onPress={onToggle}
+            style={{
+                width: 44, height: 24,
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: isEnabled ? '#000' : '#ccc',
+                backgroundColor: isEnabled ? '#000' : '#fff',
+                justifyContent: 'center',
+                paddingHorizontal: 2,
+                alignItems: isEnabled ? 'flex-end' : 'flex-start',
+            }}
+        >
+            <View style={{
+                width: 16, height: 16,
+                borderRadius: 8,
+                backgroundColor: isEnabled ? '#fff' : '#ccc',
+            }} />
+        </TouchableOpacity>
+    );
+};
+
 export default function MenuDashboard({ route, navigation }) {
   const { shopId, password } = route.params;
 
@@ -30,7 +55,9 @@ export default function MenuDashboard({ route, navigation }) {
   const [editingCatIndex, setEditingCatIndex] = useState(null);
   const [editingProdCoords, setEditingProdCoords] = useState(null);
   const [tempCatTitle, setTempCatTitle] = useState('');
-  const [tempProd, setTempProd] = useState({ name: '', description: '', price: '', station: 'KITCHEN' });
+  const [tempCatTitleEn, setTempCatTitleEn] = useState('');
+  const [tempCatTitleDe, setTempCatTitleDe] = useState('');
+  const [tempProd, setTempProd] = useState({ name: '', name_en: '', name_de: '', description: '', description_en: '', description_de: '', price: '', station: 'KITCHEN' });
 
   const loadMenu = async () => {
     setLoading(true);
@@ -87,7 +114,7 @@ export default function MenuDashboard({ route, navigation }) {
     if (result.success) {
       setFullShopData(dataToSave);
       setMenuData(updatedMenu);
-      setViewMode('LIST');
+      if (!skipViewReset) setViewMode('LIST');
     } else {
       Alert.alert("Error", "Failed to save");
     }
@@ -98,9 +125,13 @@ export default function MenuDashboard({ route, navigation }) {
     if (index !== null) {
       setEditingCatIndex(index);
       setTempCatTitle(menuData[index].title);
+      setTempCatTitleEn(menuData[index].title_en || '');
+      setTempCatTitleDe(menuData[index].title_de || '');
     } else {
       setEditingCatIndex(null);
       setTempCatTitle('');
+      setTempCatTitleEn('');
+      setTempCatTitleDe('');
     }
     setViewMode('EDIT_CAT');
   };
@@ -108,13 +139,20 @@ export default function MenuDashboard({ route, navigation }) {
   const saveCategory = () => {
     if (!tempCatTitle.trim()) { Alert.alert("Error", "Title required"); return; }
     const newMenu = [...menuData];
+    const isRakoumel = shopId === 'rakoumel';
+
     if (editingCatIndex !== null) {
       newMenu[editingCatIndex].title = tempCatTitle;
+      if (isRakoumel) {
+        newMenu[editingCatIndex].title_en = tempCatTitleEn;
+        newMenu[editingCatIndex].title_de = tempCatTitleDe;
+      }
     } else {
       const newId = tempCatTitle.toLowerCase().replace(/ /g, '-') + '-' + Date.now();
-      const newCategory = { id: newId, title: tempCatTitle, items: [] };
+      const extraFields = isRakoumel ? { title_en: tempCatTitleEn, title_de: tempCatTitleDe } : {};
+      const newCategory = { id: newId, title: tempCatTitle, ...extraFields, items: [] };
 
-      const DAILY_TITLE = 'ΠΙΆΤΑ ΗΜΈΡΑΣ';
+      const DAILY_TITLE  = 'ΠΙΆΤΑ ΗΜΈΡΑΣ';
       const ANCHOR_TITLE = 'ΦΑΓΗΤΆ ΤΗΣ ΏΡΑΣ';
 
       if (tempCatTitle.trim().toUpperCase() === DAILY_TITLE) {
@@ -133,16 +171,35 @@ export default function MenuDashboard({ route, navigation }) {
     saveChanges(newMenu);
   };
 
+  const DAILY_ID = 'piata_imeras';
+
+  const toggleCategoryEnable = () => {
+      const newMenu = [...menuData];
+      const catIndex = newMenu.findIndex(c => c.id === DAILY_ID);
+      if (catIndex === -1) return;
+      newMenu[catIndex].enable = newMenu[catIndex].enable === 1 ? 0 : 1;
+      saveChanges(newMenu, true);
+  };
+
+  const toggleItemEnable = (prodIndex) => {
+      const newMenu = [...menuData];
+      const catIndex = newMenu.findIndex(c => c.id === DAILY_ID);
+      if (catIndex === -1) return;
+      const item = newMenu[catIndex].items[prodIndex];
+      item.enable = item.enable === 1 ? 0 : 1;
+      saveChanges(newMenu, true);
+  };
+
   const handleDeleteCategory = (index) => {
-    Alert.alert("Delete Category", "Delete all products inside?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: 'destructive', onPress: () => {
-          const newMenu = [...menuData];
-          newMenu.splice(index, 1);
-          if (openCategoryIndex === index) setOpenCategoryIndex(null);
-          saveChanges(newMenu);
-      }}
-    ]);
+      Alert.alert("Delete Category", "Delete all products inside?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: 'destructive', onPress: () => {
+            const newMenu = [...menuData];
+            newMenu.splice(index, 1);
+            if (openCategoryIndex === index) setOpenCategoryIndex(null);
+            saveChanges(newMenu);
+        }}
+      ]);
   };
 
   const openProductEdit = (catIndex, prodIndex = null) => {
@@ -152,7 +209,8 @@ export default function MenuDashboard({ route, navigation }) {
       setTempProd({ ...menuData[catIndex].items[prodIndex] });
     } else {
       setEditingProdCoords({ catIndex, prodIndex: null });
-      setTempProd({ name: '', description: '', price: '', station: 'KITCHEN' });
+      setTempProd({ name: '', name_en: '', name_de: '', description: '', description_en: '', description_de: '', price: '', station: 'KITCHEN' });
+
     }
     setViewMode('EDIT_PROD');
   };
@@ -227,17 +285,24 @@ export default function MenuDashboard({ route, navigation }) {
             <Card key={category.id || catIndex} style={styles.card} mode="elevated">
               
               <View style={styles.catHeader}>
-                  <Text variant="titleMedium" style={styles.catTitle}>{category.title.toUpperCase()}</Text>
+                <Text variant="titleMedium" style={styles.catTitle}>{category.title.toUpperCase()}</Text>
 
-                  {isExpanded && (
+                {isExpanded && (
                     <View style={styles.actionButtonsRow}>
-                      <Button mode="outlined" compact onPress={() => openCategoryEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Edit</Button>
-                      <Button mode="outlined" compact onPress={() => openProductEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Add</Button>
-                      <Button mode="outlined" compact onPress={() => handleDeleteCategory(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Delete</Button>
+                        {/* Toggle μόνο για ΠΙΆΤΑ ΗΜΈΡΑΣ */}
+                        {category.id === DAILY_ID && (
+                            <ToggleSwitch
+                                value={category.enable ?? 0}
+                                onToggle={toggleCategoryEnable}
+                            />
+                        )}
+                        <Button mode="outlined" compact onPress={() => openCategoryEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Edit</Button>
+                        <Button mode="outlined" compact onPress={() => openProductEdit(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Add</Button>
+                        <Button mode="outlined" compact onPress={() => handleDeleteCategory(catIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Delete</Button>
                     </View>
-                  )}
+                )}
 
-                  <IconButton 
+                  <IconButton
                     icon={isExpanded ? "chevron-down" : "chevron-up"}
                     iconColor="black"
                     size={24}
@@ -252,23 +317,21 @@ export default function MenuDashboard({ route, navigation }) {
                 <View>
                   {category.items.map((item, prodIndex) => (
                       <View key={prodIndex} style={styles.productRow}>
-                          
                           <TouchableOpacity style={{flex: 1}} onPress={() => openProductEdit(catIndex, prodIndex)}>
                               <Text style={styles.prodName}>{item.name}</Text>
                               {item.description ? <Text style={styles.prodDesc} numberOfLines={1}>{item.description}</Text> : null}
-                              <Text style={styles.prodPrice}>{item.price} <Text style={{fontSize: 10, color: '#999', fontWeight: 'normal'}}>• {item.station || 'KITCHEN'}</Text></Text>
+                              <Text style={styles.prodPrice}>{item.price} ...</Text>
                           </TouchableOpacity>
 
-                          <Button
-                            mode="outlined"
-                            compact
-                            onPress={() => handleDeleteProduct(catIndex, prodIndex)}
-                            style={styles.actionBtn}
-                            labelStyle={styles.actionBtnLabel}
-                            textColor="black"
-                          >
-                            Delete
-                          </Button>
+                          {/* Toggle μόνο για items του ΠΙΆΤΑ ΗΜΈΡΑΣ */}
+                          {category.id === DAILY_ID && (
+                              <ToggleSwitch
+                                  value={item.enable ?? 0}
+                                  onToggle={() => toggleItemEnable(prodIndex)}
+                              />
+                          )}
+
+                          <Button mode="outlined" compact onPress={() => handleDeleteProduct(catIndex, prodIndex)} style={styles.actionBtn} labelStyle={styles.actionBtnLabel} textColor="black">Delete</Button>
                       </View>
                   ))}
                 </View>
@@ -326,11 +389,19 @@ export default function MenuDashboard({ route, navigation }) {
   );
 
   if (viewMode === 'EDIT_CAT') {
-      return renderForm(
-          editingCatIndex !== null ? 'EDIT CATEGORY' : 'NEW CATEGORY',
-          <TextInput label="NAME" value={tempCatTitle} onChangeText={setTempCatTitle} mode="outlined" autoFocus style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />,
-          saveCategory
-      );
+    return renderForm(
+        editingCatIndex !== null ? 'EDIT CATEGORY' : 'NEW CATEGORY',
+        <>
+            <TextInput label="NAME (GR)" value={tempCatTitle} onChangeText={setTempCatTitle} mode="outlined" autoFocus style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+            {shopId === 'rakoumel' && (
+                <>
+                    <TextInput label="NAME (EN)" value={tempCatTitleEn} onChangeText={setTempCatTitleEn} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                    <TextInput label="NAME (DE)" value={tempCatTitleDe} onChangeText={setTempCatTitleDe} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                </>
+            )}
+        </>,
+        saveCategory
+    );
   }
 
   if (viewMode === 'EDIT_PROD') {
@@ -340,12 +411,19 @@ export default function MenuDashboard({ route, navigation }) {
             <TextInput label="NAME" value={tempProd.name} onChangeText={(t) => setTempProd({...tempProd, name: t})} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
             <TextInput label="PRICE" value={tempProd.price} onChangeText={(t) => setTempProd({...tempProd, price: t})} mode="outlined" keyboardType="numbers-and-punctuation" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
             <TextInput label="DESCRIPTION" value={tempProd.description} onChangeText={(t) => setTempProd({...tempProd, description: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
-            
-            {/* ΝΕΟ: ΕΠΙΛΟΓΗ STATION (BAR Ή KITCHEN) */}
+            {shopId === 'rakoumel' && (
+                <>
+                    <TextInput label="NAME (EN)" value={tempProd.name_en || ''} onChangeText={(t) => setTempProd({...tempProd, name_en: t})} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                    <TextInput label="NAME (DE)" value={tempProd.name_de || ''} onChangeText={(t) => setTempProd({...tempProd, name_de: t})} mode="outlined" style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                    <TextInput label="DESCRIPTION (EN)" value={tempProd.description_en || ''} onChangeText={(t) => setTempProd({...tempProd, description_en: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                    <TextInput label="DESCRIPTION (DE)" value={tempProd.description_de || ''} onChangeText={(t) => setTempProd({...tempProd, description_de: t})} mode="outlined" multiline numberOfLines={3} style={styles.input} activeOutlineColor="black" outlineColor="#ccc" textColor="black" theme={{ colors: { background: 'white' } }} />
+                </>
+            )}
+            {/* ΕΠΙΛΟΓΗ STATION (BAR Ή KITCHEN) */}
             <Text style={{marginBottom: 8, marginTop: 10, fontWeight: 'bold', fontSize: 12, color: '#666'}}>STATION</Text>
             <View style={{flexDirection: 'row', gap: 10, marginBottom: 20}}>
                 <Button 
-                    mode={tempProd.station === 'BAR' ? 'contained' : 'outlined'} 
+                    mode={tempProd.station === 'BAR' ? 'contained' : 'outlined'}
                     onPress={() => setTempProd({...tempProd, station: 'BAR'})}
                     style={{flex: 1, borderColor: 'black'}}
                     buttonColor={tempProd.station === 'BAR' ? 'black' : 'transparent'}
